@@ -1,316 +1,432 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, ChevronDown, ArrowRight, BarChart3, Activity } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine } from 'recharts';
+import {
+    ArrowLeft, ChevronDown, ArrowRight, BarChart3, Activity,
+    Flame, Beef, Wheat, Droplet, TrendingUp, Calendar,
+} from 'lucide-react';
+import {
+    XAxis, YAxis,
+    ResponsiveContainer, ReferenceLine, Tooltip,
+    AreaChart, Area,
+} from 'recharts';
+
+/* ─── Neumorphism palette tokens ─────────────────────────────── */
+const NEU_BG    = '#e8edf2';
+const NEU_DARK  = '#c8cfd8';
+const NEU_LIGHT = '#ffffff';
 
 interface PageProps {
     auth: { user: any };
     targetDate: string;
     mealsOnDate: any[];
-    aggregates: {
-        calories: number;
-        protein: number;
-        carbs: number;
-        fats: number;
-    };
+    aggregates: { calories: number; protein: number; carbs: number; fats: number };
     weeklyTrends: {
-        date: string;
-        short_day: string;
-        day_num: string;
-        calories: number;
-        protein: number;
-        carbs: number;
-        fats: number;
+        date: string; short_day: string; day_num: string;
+        calories: number; protein: number; carbs: number; fats: number;
     }[];
 }
 
 const TABS = ['All Meals', 'Breakfast', 'Morning Snack', 'Lunch', 'Evening Snack', 'Dinner'];
 
+/* ── Reusable neumorphic card ── */
+function NeuCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div
+            className={`rounded-3xl p-6 ${className}`}
+            style={{
+                background: NEU_BG,
+                boxShadow: `8px 8px 20px ${NEU_DARK}, -8px -8px 20px ${NEU_LIGHT}`,
+            }}
+        >
+            {children}
+        </div>
+    );
+}
+
+/* ── Inset (pressed) neu card ── */
+function NeuInset({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div
+            className={`rounded-2xl ${className}`}
+            style={{
+                background: NEU_BG,
+                boxShadow: `inset 5px 5px 12px ${NEU_DARK}, inset -5px -5px 12px ${NEU_LIGHT}`,
+            }}
+        >
+            {children}
+        </div>
+    );
+}
+
+/* ── Neumorphic ring progress ── */
+function NeuRing({ pct, size = 100, color, label, sublabel }: {
+    pct: number; size?: number; color: string; label: string; sublabel?: string;
+}) {
+    const r = (size / 2) - 10;
+    const circ = 2 * Math.PI * r;
+    const offset = circ - (circ * Math.min(100, pct)) / 100;
+    return (
+        <div className="flex flex-col items-center gap-1">
+            <div
+                className="rounded-full flex items-center justify-center relative"
+                style={{
+                    width: size, height: size,
+                    background: NEU_BG,
+                    boxShadow: `6px 6px 14px ${NEU_DARK}, -6px -6px 14px ${NEU_LIGHT}`,
+                }}
+            >
+                <svg width={size} height={size} className="absolute inset-0 -rotate-90" viewBox={`0 0 ${size} ${size}`}>
+                    <circle cx={size / 2} cy={size / 2} r={r} fill="transparent"
+                        stroke={NEU_DARK} strokeWidth="7" />
+                    <circle cx={size / 2} cy={size / 2} r={r} fill="transparent"
+                        stroke={color} strokeWidth="7"
+                        strokeDasharray={circ} strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
+                </svg>
+                <div className="relative z-10 text-center">
+                    <div className="font-black text-slate-700 text-sm leading-none">{label}</div>
+                    {sublabel && <div className="text-[10px] font-bold text-slate-400 mt-0.5">{sublabel}</div>}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ── Macro bar row ── */
+function MacroRow({ icon, name, value, target, pct, color }: {
+    icon: React.ReactNode; name: string; value: number; target: number; pct: number; color: string;
+}) {
+    return (
+        <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: NEU_BG, boxShadow: `3px 3px 8px ${NEU_DARK}, -3px -3px 8px ${NEU_LIGHT}` }}>
+                {icon}
+            </div>
+            <div className="flex-1">
+                <div className="flex justify-between text-xs font-bold text-slate-500 mb-1.5">
+                    <span>{name}</span>
+                    <span className="text-slate-700">{value}g <span className="font-normal text-slate-400">/ {target}g</span></span>
+                </div>
+                <NeuInset className="w-full h-2.5 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, backgroundColor: color }} />
+                </NeuInset>
+            </div>
+            <span className="text-xs font-black w-10 text-right" style={{ color }}>
+                {Math.round(pct)}%
+            </span>
+        </div>
+    );
+}
+
 export default function Insights() {
-    const { auth, targetDate, mealsOnDate, aggregates, weeklyTrends } = usePage().props as unknown as PageProps;
+    const { auth, targetDate, mealsOnDate, weeklyTrends } = usePage().props as unknown as PageProps;
     const user = auth.user;
 
-    const [activeTab, setActiveTab] = useState('All Meals');
-    const [trendType, setTrendType] = useState('Calories');
+    const [activeTab, setActiveTab]   = useState('All Meals');
+    const [trendType, setTrendType]   = useState('calories');
 
-    // Dynamic targets from User Model
-    const dailyGoal = user.daily_calorie_target || 2000;
-    const targets = {
+    const dailyGoal  = user.daily_calorie_target || 2000;
+    const targets    = {
         protein: user.daily_protein_target || 150,
-        carbs: user.daily_carbs_target || 200,
-        fats: user.daily_fats_target || 65,
+        carbs:   user.daily_carbs_target   || 200,
+        fats:    user.daily_fats_target    || 65,
     };
 
-    // Calculate Percentages Dynamically Based on activeTab
-    const filteredMeals = activeTab === 'All Meals' 
-        ? mealsOnDate 
+    const filtered = activeTab === 'All Meals'
+        ? mealsOnDate
         : mealsOnDate.filter(m => m.meal_type === activeTab);
-    
-    // We replace the backend 'aggregates' with the dynamically filtered values!
-    const dynamicAggregates = {
-        calories: filteredMeals.reduce((acc, meal) => acc + meal.calories, 0),
-        protein: filteredMeals.reduce((acc, meal) => acc + meal.protein, 0),
-        carbs: filteredMeals.reduce((acc, meal) => acc + meal.carbs, 0),
-        fats: filteredMeals.reduce((acc, meal) => acc + meal.fats, 0),
+
+    const agg = {
+        calories: filtered.reduce((a, m) => a + m.calories, 0),
+        protein:  filtered.reduce((a, m) => a + m.protein,  0),
+        carbs:    filtered.reduce((a, m) => a + m.carbs,    0),
+        fats:     filtered.reduce((a, m) => a + m.fats,     0),
     };
 
-    // Calculate budget percentage depending on if it's a specific meal category or all meals
-    // We assume meals are ~28% of budget, snacks are ~8%
-    const currentTabGoal = activeTab === 'All Meals' 
-        ? dailyGoal 
+    const tabGoal   = activeTab === 'All Meals' ? dailyGoal
         : (activeTab.includes('Snack') ? dailyGoal * 0.08 : dailyGoal * 0.28);
-        
-    const calPercent = Math.min(100, Math.round((dynamicAggregates.calories / currentTabGoal) * 100));
-    
-    // Animated Face Logic based on completion
-    const getFaceState = () => {
-        if (calPercent === 0) return { expression: '(-_-)', bg: 'bg-slate-200 text-slate-600', label: 'You haven\'t tracked any meal yet.' };
-        if (calPercent < 60) return { expression: '(^-^)', bg: 'bg-emerald-100 text-emerald-600', label: 'Good start. Keep it up!' };
-        if (calPercent <= 100) return { expression: '(^O^)', bg: 'bg-emerald-500 text-white', label: 'Perfect pace!' };
-        return { expression: '(>_<)', bg: 'bg-red-500 text-white', label: 'You went over budget.' };
-    };
-    const faceState = getFaceState();
+    const calPct    = Math.min(100, Math.round((agg.calories / tabGoal) * 100));
 
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const macroGoal = (base: number) => Math.round(
+        activeTab === 'All Meals' ? base
+            : base * (activeTab.includes('Snack') ? 0.1 : 0.3)
+    );
+
+    const weeklyTotal = weeklyTrends.reduce((a, d) => a + d.calories, 0);
+    const avgPerDay   = Math.round(weeklyTotal / 7);
+
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         router.get('/insights', { date: e.target.value }, { preserveState: true });
-    };
 
-    // Format header date (e.g., "30 Jan")
     const d = new Date(targetDate);
     const headerTitle = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })} Insights`;
 
-    // Calculate averages for charts
-    const weeklyTotal = weeklyTrends.reduce((acc, day) => acc + day.calories, 0);
-    const avgPerDay = Math.round(weeklyTotal / 7);
+    /* ── Calorie face state ── */
+    const face = calPct === 0   ? { emoji: '😴', msg: "Nothing tracked yet — log a meal to see insights!" }
+        : calPct < 60           ? { emoji: '😊', msg: "Great start! Keep building on this." }
+        : calPct <= 100         ? { emoji: '🎯', msg: "Perfect pace! You're on target." }
+        :                         { emoji: '⚠️', msg: "You've exceeded today's calorie budget." };
+
+    const trendOptions = [
+        { key: 'calories', label: 'Calories', color: '#6366f1' },
+        { key: 'protein',  label: 'Protein',  color: '#0ea5e9' },
+        { key: 'carbs',    label: 'Carbs',    color: '#f59e0b' },
+        { key: 'fats',     label: 'Fats',     color: '#f43f5e' },
+    ];
+    const activeTrend = trendOptions.find(t => t.key === trendType) || trendOptions[0];
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+        <div className="min-h-screen pb-20" style={{ background: NEU_BG }}>
             <Head title="Insights" />
-            
-            {/* Native Mobile Header with Hidden Calendar Hook */}
-            <div className="bg-white dark:bg-slate-900 sticky top-0 z-30 shadow-sm">
-                <div className="flex items-center justify-between p-4 px-5">
-                    <Link href="/dashboard" className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                        <ArrowLeft className="w-6 h-6 text-slate-800 dark:text-white" />
+
+            {/* ── STICKY HEADER ── */}
+            <div className="sticky top-0 z-30 px-4 py-3"
+                style={{ background: NEU_BG, boxShadow: `0 4px 12px ${NEU_DARK}` }}>
+                <div className="max-w-3xl mx-auto flex items-center gap-3">
+                    <Link href="/dashboard"
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center transition"
+                        style={{ boxShadow: `4px 4px 10px ${NEU_DARK}, -4px -4px 10px ${NEU_LIGHT}` }}>
+                        <ArrowLeft className="w-5 h-5 text-slate-600" />
                     </Link>
 
-                    <div className="flex-1 text-center relative group flex items-center justify-center">
-                        <h1 className="text-xl font-medium text-slate-800 dark:text-white flex items-center gap-1 cursor-pointer">
-                            {headerTitle} <ChevronDown className="w-5 h-5 opacity-50" />
-                        </h1>
-                        <input 
-                            type="date" 
+                    {/* Date picker */}
+                    <div className="flex-1 relative flex items-center justify-center">
+                        <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl cursor-pointer"
+                            style={{ boxShadow: `inset 3px 3px 8px ${NEU_DARK}, inset -3px -3px 8px ${NEU_LIGHT}` }}>
+                            <Calendar className="w-4 h-4 text-slate-500" />
+                            <span className="font-bold text-slate-700 text-sm">{headerTitle}</span>
+                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                        </div>
+                        <input type="date"
                             className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                            value={targetDate}
-                            onChange={handleDateChange}
-                        />
+                            value={targetDate} onChange={handleDateChange} />
                     </div>
-                    
-                    <div className="w-10 line-clamp-1 block"></div>
+
+                    <Link href="/dashboard"
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                        style={{ boxShadow: `4px 4px 10px ${NEU_DARK}, -4px -4px 10px ${NEU_LIGHT}` }}>
+                        <TrendingUp className="w-5 h-5 text-indigo-500" />
+                    </Link>
                 </div>
 
-                {/* Sliding Tabs */}
-                <div className="flex overflow-x-auto scrollbar-hide pt-2 pb-1 border-b border-slate-200 dark:border-slate-800 px-2">
+                {/* Tabs */}
+                <div className="max-w-3xl mx-auto mt-3 flex overflow-x-auto scrollbar-hide gap-2 pb-1">
                     {TABS.map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`whitespace-nowrap px-4 py-3 font-medium text-[15px] transition-all relative ${
-                                activeTab === tab 
-                                    ? 'text-red-500' 
-                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                            }`}
-                        >
+                        <button key={tab} onClick={() => setActiveTab(tab)}
+                            className="whitespace-nowrap px-4 py-2 rounded-2xl text-sm font-bold transition-all"
+                            style={activeTab === tab ? {
+                                background: '#6366f1',
+                                color: '#fff',
+                                boxShadow: `3px 3px 8px ${NEU_DARK}`,
+                            } : {
+                                background: NEU_BG,
+                                color: '#64748b',
+                                boxShadow: `3px 3px 8px ${NEU_DARK}, -3px -3px 8px ${NEU_LIGHT}`,
+                            }}>
                             {tab}
-                            {activeTab === tab && (
-                                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-red-500 rounded-t-full"></span>
-                            )}
                         </button>
                     ))}
                 </div>
             </div>
 
-            <div className="max-w-lg mx-auto w-full p-4 space-y-6 mt-2">
-                
-                {/* Empty Tracker Card */}
-                {dynamicAggregates.calories === 0 && (
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{faceState.label}</h2>
-                        <p className="text-slate-500 text-sm font-medium mb-6 leading-relaxed">
-                            Track to get insights on nutrients, good/bad foods, and get healthy food suggestions
-                        </p>
-                        <hr className="border-slate-100 dark:border-slate-800 pb-4" />
-                        <Link href="/dashboard" className="flex items-center justify-between text-red-500 font-bold hover:text-red-600 transition">
-                            Track Your Meals <ArrowRight className="w-5 h-5" />
-                        </Link>
-                    </div>
-                )}
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
 
-                {/* Food Log Analysis Heading */}
-                <div className="px-2">
-                    <div className="flex items-center gap-2 text-slate-500 mb-2">
-                        <Activity className="w-5 h-5" />
-                        <h3 className="font-semibold text-[17px] tracking-tight">Food Log Analysis</h3>
+                {/* ── HERO CALORIE CARD ── */}
+                <NeuCard>
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Calorie Budget</p>
+                            <h2 className="text-3xl font-black text-slate-800">{agg.calories.toLocaleString()}
+                                <span className="text-lg font-bold text-slate-400 ml-1">/ {Math.round(tabGoal)}</span>
+                            </h2>
+                        </div>
+                        <div className="text-5xl">{face.emoji}</div>
                     </div>
-                    <p className="text-sm text-slate-500 font-medium">
-                        See your daily calorie intake and calorie budget here. Start tracking to see this section come to life.
-                    </p>
+
+                    {/* Big progress bar */}
+                    <NeuInset className="w-full h-6 overflow-hidden mb-3">
+                        <div className="h-full rounded-full transition-all duration-1000"
+                            style={{
+                                width: `${calPct}%`,
+                                background: calPct > 100 ? '#f43f5e'
+                                    : calPct < 60       ? '#10b981'
+                                    :                     '#6366f1',
+                            }} />
+                    </NeuInset>
+
+                    <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium text-slate-500">{face.msg}</p>
+                        <span className="text-2xl font-black text-slate-700">{calPct}%</span>
+                    </div>
+                </NeuCard>
+
+                {/* ── 4 STAT RINGS ── */}
+                <div className="grid grid-cols-4 gap-3">
+                    {[
+                        { icon: <Flame className="w-4 h-4 text-rose-500" />, label: `${agg.calories}`, sub: 'kcal', pct: calPct, color: '#f43f5e' },
+                        { icon: <Beef className="w-4 h-4 text-sky-500" />,   label: `${agg.protein}g`, sub: 'protein', pct: Math.min(100, (agg.protein / macroGoal(targets.protein)) * 100), color: '#0ea5e9' },
+                        { icon: <Wheat className="w-4 h-4 text-amber-500" />, label: `${agg.carbs}g`, sub: 'carbs', pct: Math.min(100, (agg.carbs / macroGoal(targets.carbs)) * 100), color: '#f59e0b' },
+                        { icon: <Droplet className="w-4 h-4 text-emerald-500" />, label: `${agg.fats}g`, sub: 'fats', pct: Math.min(100, (agg.fats / macroGoal(targets.fats)) * 100), color: '#10b981' },
+                    ].map((s, i) => (
+                        <div key={i} className="flex flex-col items-center gap-2">
+                            <NeuRing pct={s.pct} size={80} color={s.color} label={s.label} sublabel={s.sub} />
+                        </div>
+                    ))}
                 </div>
 
-                {/* Budget Card */}
-                <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <h2 className="text-[17px] font-bold text-slate-800 dark:text-white mb-6">Your Calorie Budget</h2>
-                    
-                    <div className="flex items-center gap-6 mb-8 mt-2 pl-2">
-                        {/* Animated scalable Face Icon */}
-                        <div className={`w-[80px] h-[80px] rounded-full flex items-center justify-center font-bold text-2xl transition-all shadow-inner ${faceState.bg}`}>
-                            {faceState.expression}
+                {/* ── MACROS BREAKDOWN ── */}
+                <NeuCard>
+                    <div className="flex items-center gap-2 mb-5">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                            style={{ background: NEU_BG, boxShadow: `3px 3px 8px ${NEU_DARK}, -3px -3px 8px ${NEU_LIGHT}` }}>
+                            <Activity className="w-4 h-4 text-indigo-500" />
                         </div>
-                        
-                        <div className="flex-1 pt-4 relative">
-                            <div className="flex justify-between items-end mb-1">
-                                <span className="text-slate-600 dark:text-slate-400 font-medium text-sm ml-[15%]">
-                                    {dynamicAggregates.calories} / {Math.round(currentTabGoal)} Cal
-                                </span>
+                        <h3 className="font-black text-slate-700">Macronutrients</h3>
+                    </div>
+                    <div className="space-y-5">
+                        <MacroRow icon={<Beef className="w-4 h-4 text-sky-500" />}
+                            name="Protein" value={agg.protein} target={macroGoal(targets.protein)}
+                            pct={Math.min(100, (agg.protein / Math.max(1, macroGoal(targets.protein))) * 100)}
+                            color="#0ea5e9" />
+                        <MacroRow icon={<Wheat className="w-4 h-4 text-amber-500" />}
+                            name="Carbohydrates" value={agg.carbs} target={macroGoal(targets.carbs)}
+                            pct={Math.min(100, (agg.carbs / Math.max(1, macroGoal(targets.carbs))) * 100)}
+                            color="#f59e0b" />
+                        <MacroRow icon={<Droplet className="w-4 h-4 text-emerald-500" />}
+                            name="Fats" value={agg.fats} target={macroGoal(targets.fats)}
+                            pct={Math.min(100, (agg.fats / Math.max(1, macroGoal(targets.fats))) * 100)}
+                            color="#10b981" />
+                    </div>
+                </NeuCard>
+
+                {/* ── WEEKLY TREND ── */}
+                <NeuCard>
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                style={{ background: NEU_BG, boxShadow: `3px 3px 8px ${NEU_DARK}, -3px -3px 8px ${NEU_LIGHT}` }}>
+                                <BarChart3 className="w-4 h-4 text-indigo-500" />
                             </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 rounded-full relative overflow-hidden">
-                                <div className="absolute top-0 left-0 h-full bg-slate-900 dark:bg-slate-100 transition-all duration-700" style={{ width: `${calPercent}%` }}></div>
-                            </div>
+                            <h3 className="font-black text-slate-700">7-Day Trends</h3>
                         </div>
-                        
-                        <div className="text-5xl font-light text-slate-400 -mt-2">
-                            {calPercent}<span className="text-2xl">%</span>
+                        {/* Trend type pills */}
+                        <div className="flex gap-1.5">
+                            {trendOptions.map(t => (
+                                <button key={t.key} onClick={() => setTrendType(t.key)}
+                                    className="px-3 py-1 rounded-full text-[11px] font-black transition-all"
+                                    style={trendType === t.key ? {
+                                        background: t.color, color: '#fff',
+                                        boxShadow: `2px 2px 6px ${NEU_DARK}`,
+                                    } : {
+                                        background: NEU_BG, color: '#64748b',
+                                        boxShadow: `2px 2px 6px ${NEU_DARK}, -2px -2px 6px ${NEU_LIGHT}`,
+                                    }}>
+                                    {t.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    <p className="text-sm text-slate-500 font-medium mb-6">
-                        People who track their meals are more likely to lose weight. Track to see your progress.
-                    </p>
-
-                    <h4 className="text-slate-500 font-medium text-sm mb-4">Macronutrients Breakup</h4>
-
-                    <div className="space-y-4">
+                    {/* Summary stats */}
+                    <div className="grid grid-cols-2 gap-3 mb-6">
                         {[
-                            { name: 'Proteins', icon: '🥜', value: dynamicAggregates.protein, target: Math.round(activeTab === 'All Meals' ? targets.protein : targets.protein * (activeTab.includes('Snack') ? 0.1 : 0.3)), w: Math.min(100, (dynamicAggregates.protein/Math.max(1, Math.round(activeTab === 'All Meals' ? targets.protein : targets.protein * (activeTab.includes('Snack') ? 0.1 : 0.3))))*100) },
-                            { name: 'Fats', icon: '🥑', value: dynamicAggregates.fats, target: Math.round(activeTab === 'All Meals' ? targets.fats : targets.fats * (activeTab.includes('Snack') ? 0.1 : 0.3)), w: Math.min(100, (dynamicAggregates.fats/Math.max(1, Math.round(activeTab === 'All Meals' ? targets.fats : targets.fats * (activeTab.includes('Snack') ? 0.1 : 0.3))))*100) },
-                            { name: 'Carbs', icon: '🥐', value: dynamicAggregates.carbs, target: Math.round(activeTab === 'All Meals' ? targets.carbs : targets.carbs * (activeTab.includes('Snack') ? 0.1 : 0.3)), w: Math.min(100, (dynamicAggregates.carbs/Math.max(1, Math.round(activeTab === 'All Meals' ? targets.carbs : targets.carbs * (activeTab.includes('Snack') ? 0.1 : 0.3))))*100) },
-                        ].map(macro => (
-                            <div key={macro.name} className="flex flex-wrap items-center justify-between text-sm py-1 gap-2">
-                                <div className="flex items-center w-[25%] font-medium text-slate-700 dark:text-slate-300">
-                                    <span className="mr-3 opacity-60 text-lg">{macro.icon}</span> {macro.name}
-                                </div>
-                                <div className="text-slate-500 font-medium opacity-80 min-w-[30%]">
-                                    {macro.value} g / {macro.target} g
-                                </div>
-                                <div className="flex-1 flex items-center justify-end gap-3 min-w-[20%]">
-                                    <div className="w-16 h-1 bg-slate-100 rounded-full relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 h-full bg-slate-800 transition-all duration-700" style={{ width: `${macro.w}%` }}></div>
-                                    </div>
-                                    <span className="w-8 text-right text-slate-400 font-medium">{Math.round(macro.w)}%</span>
-                                </div>
-                            </div>
+                            { label: 'Weekly Total', value: weeklyTotal.toLocaleString(), unit: 'kcal' },
+                            { label: 'Daily Average', value: avgPerDay.toLocaleString(), unit: 'kcal/day' },
+                        ].map(s => (
+                            <NeuInset key={s.label} className="p-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
+                                <p className="text-xl font-black text-slate-700">{s.value}
+                                    <span className="text-xs font-bold text-slate-400 ml-1">{s.unit}</span>
+                                </p>
+                            </NeuInset>
                         ))}
                     </div>
-                    
-                    <hr className="border-slate-100 dark:border-slate-800 my-4" />
-                    <div className="flex justify-between items-center text-sm font-medium text-slate-600 hover:text-slate-800 cursor-pointer">
-                        View Top Contributors <ArrowRight className="w-4 h-4 opacity-50" />
-                    </div>
-                </div>
 
-                {/* Weekly Trends Heading */}
-                <div className="px-2 mt-8">
-                    <div className="flex items-center gap-2 text-slate-500 mb-2">
-                        <BarChart3 className="w-5 h-5" />
-                        <h3 className="font-semibold text-[17px] tracking-tight">Weekly Trends</h3>
-                    </div>
-                    <p className="text-sm text-slate-500 font-medium">
-                        See your weekly calorie and macro (protein, fat, carbs) intake here. For an accurate analysis, track your breakfast, lunch, dinner and snacks every day.
-                    </p>
-                </div>
-
-                {/* Weekly Trends Card */}
-                <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-[17px] font-bold text-slate-800 dark:text-white">Last 7 days</h2>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-slate-500 font-medium">Choose Calories or Macro:</span>
-                            <select 
-                                value={trendType}
-                                onChange={(e) => setTrendType(e.target.value)}
-                                className="bg-slate-50 border border-slate-200 rounded-full py-1 text-sm font-semibold text-slate-700 focus:ring-0 outline-none pl-3 pr-8 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_0.5rem_center] bg-[length:1em_1em]"
-                            >
-                                <option>Calories</option>
-                                <option>Protein</option>
-                                <option>Carbs</option>
-                                <option>Fats</option>
-                            </select>
+                    {/* Area chart */}
+                    <NeuInset className="p-4">
+                        <div className="h-52">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={weeklyTrends} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%"  stopColor={activeTrend.color} stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor={activeTrend.color} stopOpacity={0}   />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="0" stroke={NEU_DARK} vertical={false} />
+                                    <XAxis dataKey="short_day" axisLine={false} tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
+                                    <YAxis axisLine={false} tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                        domain={['auto', 'auto']} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: NEU_BG,
+                                            border: 'none',
+                                            borderRadius: '16px',
+                                            boxShadow: `4px 4px 12px ${NEU_DARK}, -4px -4px 12px ${NEU_LIGHT}`,
+                                            fontSize: '12px',
+                                            fontWeight: 'bold',
+                                        }}
+                                        itemStyle={{ color: activeTrend.color }}
+                                        cursor={{ stroke: activeTrend.color, strokeWidth: 1, strokeDasharray: '4 4' }}
+                                    />
+                                    {trendType === 'calories' && (
+                                        <ReferenceLine y={dailyGoal} stroke="#f87171" strokeDasharray="3 3"
+                                            label={{ value: 'goal', position: 'insideTopRight', fontSize: 10, fill: '#f87171' }} />
+                                    )}
+                                    <Area type="monotone" dataKey={trendType}
+                                        stroke={activeTrend.color} strokeWidth={2.5}
+                                        fill="url(#trendGrad)"
+                                        dot={{ r: 4, fill: NEU_BG, stroke: activeTrend.color, strokeWidth: 2 }}
+                                        activeDot={{ r: 6, fill: activeTrend.color }} />
+                                </AreaChart>
+                            </ResponsiveContainer>
                         </div>
-                    </div>
+                    </NeuInset>
+                </NeuCard>
 
-                    <div className="flex gap-10 mb-8 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <div>
-                            <div className="text-2xl font-light text-slate-800 dark:text-white">
-                                {weeklyTotal} <span className="text-lg">Cal</span>
-                            </div>
-                            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide">Weekly Total</div>
+                {/* ── MEAL LIST ── */}
+                {filtered.length > 0 && (
+                    <NeuCard>
+                        <h3 className="font-black text-slate-700 mb-4">Meals Logged</h3>
+                        <div className="space-y-3">
+                            {filtered.map((meal: any) => (
+                                <NeuInset key={meal.id} className="flex items-center gap-3 p-4">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                                        style={{ background: NEU_BG, boxShadow: `3px 3px 8px ${NEU_DARK}, -3px -3px 8px ${NEU_LIGHT}` }}>
+                                        {meal.meal_type.includes('Snack') ? '🍎' : meal.meal_type === 'Breakfast' ? '🍳' : meal.meal_type === 'Lunch' ? '🥗' : meal.meal_type === 'Dinner' ? '🍽️' : '🥘'}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-slate-700 text-sm truncate">{meal.food_description}</p>
+                                        <p className="text-xs font-medium text-slate-400">{meal.meal_type}</p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="font-black text-slate-700 text-sm">{meal.calories} kcal</p>
+                                        <p className="text-[10px] text-slate-400 font-medium">{meal.protein}g P · {meal.carbs}g C · {meal.fats}g F</p>
+                                    </div>
+                                </NeuInset>
+                            ))}
                         </div>
-                        <div>
-                            <div className="text-2xl font-light text-slate-800 dark:text-white">
-                                {avgPerDay} <span className="text-lg">Cal</span>
-                            </div>
-                            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide">Average Per Day</div>
-                        </div>
-                    </div>
+                    </NeuCard>
+                )}
 
-                    <div className="h-[250px] w-[calc(100%+30px)] -ml-5">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={weeklyTrends} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                <ReferenceLine y={dailyGoal} stroke="#f87171" strokeDasharray="3 3" />
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis 
-                                    dataKey="short_day" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                                    tickFormatter={(val, idx) => {
-                                        const dayInfo = weeklyTrends[idx] ? `\\n${weeklyTrends[idx].day_num}` : '';
-                                        return `${val}${dayInfo}`;
-                                    }}
-                                />
-                                <YAxis 
-                                    orientation="right" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: '#475569', fontSize: 11, fontWeight: 500 }}
-                                    domain={[0, Math.max(2400, dailyGoal + 400)]}
-                                />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey={trendType.toLowerCase()} 
-                                    stroke="#334155" 
-                                    strokeWidth={2}
-                                    dot={{ r: 3, fill: '#334155' }}
-                                    activeDot={{ r: 5, fill: '#f97316' }}
-                                    isAnimationActive={true}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Upsell Setup Hook */}
-                {dynamicAggregates.calories === 0 && (
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm mt-4">
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Don't miss out!</h2>
-                        <p className="text-slate-500 text-sm font-medium mb-6 leading-relaxed">
-                            Track to get insights on nutrients, good/bad foods, and get healthy food suggestions
+                {/* ── EMPTY STATE ── */}
+                {agg.calories === 0 && (
+                    <NeuCard className="text-center">
+                        <div className="text-6xl mb-4">🥗</div>
+                        <h3 className="font-black text-slate-700 text-xl mb-2">Nothing tracked yet</h3>
+                        <p className="text-slate-400 text-sm font-medium mb-6 leading-relaxed">
+                            Log a meal on the dashboard to see your insights, macros breakdown, and weekly trends come to life.
                         </p>
-                        <hr className="border-slate-100 dark:border-slate-800 pb-4" />
-                        <Link href="/dashboard" className="flex items-center justify-between text-red-500 font-bold hover:text-red-600 transition">
-                            Track Your Meals <ArrowRight className="w-5 h-5" />
+                        <Link href="/dashboard"
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-indigo-600 transition"
+                            style={{ background: NEU_BG, boxShadow: `5px 5px 12px ${NEU_DARK}, -5px -5px 12px ${NEU_LIGHT}` }}>
+                            Track Your Meals <ArrowRight className="w-4 h-4" />
                         </Link>
-                    </div>
+                    </NeuCard>
                 )}
             </div>
         </div>

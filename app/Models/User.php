@@ -3,13 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -28,10 +29,15 @@ class User extends Authenticatable
         'target_weight_kg',
         'target_months',
         'fitness_goal',
+        'current_streak',
+        'last_activity_date',
         'daily_calorie_target',
         'daily_protein_target',
         'daily_carbs_target',
         'daily_fats_target',
+        'daily_active_burn_target',
+        'xp_points',
+        'badge_count',
     ];
 
     /**
