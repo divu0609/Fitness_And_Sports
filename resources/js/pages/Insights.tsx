@@ -5,7 +5,7 @@ import {
     Flame, Beef, Wheat, Droplet, TrendingUp, Calendar,
 } from 'lucide-react';
 import {
-    XAxis, YAxis,
+    XAxis, YAxis, CartesianGrid,
     ResponsiveContainer, ReferenceLine, Tooltip,
     AreaChart, Area,
 } from 'recharts';
@@ -121,8 +121,23 @@ function MacroRow({ icon, name, value, target, pct, color }: {
 }
 
 export default function Insights() {
-    const { auth, targetDate, mealsOnDate, weeklyTrends } = usePage().props as unknown as PageProps;
-    const user = auth.user;
+    const props = usePage().props as unknown as PageProps;
+    const { auth, targetDate = '', mealsOnDate = [], weeklyTrends = [] } = props;
+    const user = auth?.user;
+
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center" style={{ background: NEU_BG }}>
+                <div className="text-center">
+                    <div className="text-6xl mb-4">🔒</div>
+                    <h3 className="font-black text-slate-700 text-xl mb-2">Please log in</h3>
+                    <p className="text-slate-400 text-sm font-medium">
+                        You need to be logged in to view your insights.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const [activeTab, setActiveTab]   = useState('All Meals');
     const [trendType, setTrendType]   = useState('calories');

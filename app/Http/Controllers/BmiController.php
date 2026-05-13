@@ -25,10 +25,10 @@ class BmiController extends Controller
         $heightM = $height / 100;
         $bmi = round($weight / ($heightM * $heightM), 1);
 
-        $apiKey = config('services.nvidia.key');
+        $apiKey = config('services.gemini.key') ?? env('GEMINI_API_KEY');
 
         if (! $apiKey) {
-            return response()->json(['error' => 'AI service not configured.'], 500);
+            return response()->json(['error' => 'Gemini service not configured.'], 500);
         }
 
         $prompt = "You are an expert certified nutritionist and fitness physician. Analyze the following person's vitals:\n"
@@ -50,22 +50,20 @@ class BmiController extends Controller
             .'Return only the raw JSON. No markdown, no explanation.';
 
         try {
-            $response = Http::timeout(90)->retry(2, 1000)->withHeaders([
-                'Authorization' => "Bearer {$apiKey}",
-                'Accept' => 'application/json',
-            ])->post('https://integrate.api.nvidia.com/v1/chat/completions', [
-                'model' => 'google/gemma-4-31b-it',
-                'messages' => [
-                    ['role' => 'user', 'content' => $prompt],
+            $response = Http::timeout(30)->withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={$apiKey}", [
+                'contents' => [
+                    ['parts' => [['text' => $prompt]]]
                 ],
-                'max_tokens' => 350,
-                'temperature' => 0.2,
-                'stream' => false,
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                ]
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                $rawText = $data['choices'][0]['message']['content'] ?? null;
+                $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
                 if ($rawText) {
                     // Strip markdown code fences if present

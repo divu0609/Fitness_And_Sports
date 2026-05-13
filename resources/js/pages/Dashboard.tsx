@@ -121,7 +121,16 @@ export default function Dashboard() {
     /* ── Onboarding state ── */
     const needsOnboarding = !user.daily_calorie_target;
     const [isOnboardingOpen, setIsOnboardingOpen] = useState(needsOnboarding);
-    const [onboardForm, setOnboardForm] = useState({ age: 26, gender: 'male', height_cm: 175, weight_kg: 78, target_weight_kg: 70, target_months: 3 });
+    const [onboardForm, setOnboardForm] = useState({ 
+        age: user.age || 26, 
+        gender: user.gender || 'male', 
+        height_cm: user.height_cm || 175, 
+        weight_kg: user.weight_kg || 78, 
+        target_weight_kg: user.target_weight_kg || 70, 
+        target_months: user.target_months || 3,
+        goal_type: user.fitness_goal || 'Weight Loss',
+        activity_level: user.activity_level || 'Light'
+    });
     const [isOnboardingLoading, setIsOnboardingLoading] = useState(false);
     const [onboardError, setOnboardError] = useState('');
 
@@ -243,6 +252,26 @@ export default function Dashboard() {
     /* ── Onboarding ── */
     const submitOnboarding = async () => {
         setIsOnboardingLoading(true); setOnboardError('');
+
+        const w = onboardForm.weight_kg;
+        const tw = onboardForm.target_weight_kg;
+        const gt = onboardForm.goal_type;
+
+        if (gt === 'Weight Loss' && tw >= w) {
+            setOnboardError('For Weight Loss, target weight must be less than current weight.');
+            setIsOnboardingLoading(false);
+            return;
+        }
+        if ((gt === 'Weight Gain' || gt === 'Muscle Gain') && tw <= w) {
+            setOnboardError('For Weight/Muscle Gain, target weight must be greater than current weight.');
+            setIsOnboardingLoading(false);
+            return;
+        }
+        if (gt === 'Maintain Weight' && tw !== w) {
+            setOnboardError('For Maintain Weight, target weight must equal current weight.');
+            setIsOnboardingLoading(false);
+            return;
+        }
         try {
             const r = await axios.post('/api/profile/calculate-targets', onboardForm);
             if (r.data.success) { router.reload({ only: ['auth'] }); setIsOnboardingOpen(false); }
@@ -593,9 +622,25 @@ export default function Dashboard() {
                         {/* Progress toward target */}
                         {targetWeight > 0 && currentWeight > 0 && (() => {
                             const startW = user.weight_kg || currentWeight;
-                            const diff = startW - targetWeight;
-                            const progress = diff <= 0 ? 100 : Math.max(0, Math.min(100, Math.round(((startW - currentWeight) / diff) * 100)));
-                            const remaining = Math.max(0, currentWeight - targetWeight).toFixed(1);
+                            const isGaining = targetWeight > startW;
+                            let progress = 0;
+                            let remainingNum = 0;
+
+                            if (startW === targetWeight) {
+                                progress = 100;
+                                remainingNum = 0;
+                            } else if (isGaining) {
+                                const totalToGain = targetWeight - startW;
+                                const gained = currentWeight - startW;
+                                progress = Math.max(0, Math.min(100, Math.round((gained / totalToGain) * 100)));
+                                remainingNum = Math.max(0, targetWeight - currentWeight);
+                            } else {
+                                const totalToLose = startW - targetWeight;
+                                const lost = startW - currentWeight;
+                                progress = Math.max(0, Math.min(100, Math.round((lost / totalToLose) * 100)));
+                                remainingNum = Math.max(0, currentWeight - targetWeight);
+                            }
+                            const remaining = remainingNum.toFixed(1);
                             return (
                                 <div className="mt-3">
                                     <div className="flex justify-between text-[11px] text-slate-400 font-medium mb-1">
@@ -802,22 +847,16 @@ export default function Dashboard() {
                     {/* 🌌 BACKGROUND */}
                     <Dialog.Overlay className="fixed inset-0 bg-gradient-to-br from-indigo-900/60 via-black/70 to-purple-900/60 backdrop-blur-md z-50" />
 
-                    {/* 💎 LIQUID GLASS + 3D MODAL */}
+                    {/* 💎 LIQUID GLASS MODAL */}
                     <Dialog.Content
-                        onMouseMove={handleMouseMove}
-                        onMouseLeave={handleMouseLeave}
-                        style={{
-                            transform: `translate(-50%, -50%) perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`
-                        }}
-                        className="fixed left-1/2 top-1/2 z-50 w-[90%] max-w-lg 
+                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-[90%] max-w-lg 
       backdrop-blur-2xl bg-white/10 dark:bg-white/5 
       border border-white/20 
       rounded-3xl 
       shadow-[0_8px_32px_rgba(0,0,0,0.37)] 
       px-6 py-8 overflow-y-auto max-h-[90vh] 
       transition-all duration-300 
-      hover:shadow-[0_0_60px_rgba(99,102,241,0.4)]
-      relative">
+      hover:shadow-[0_0_60px_rgba(99,102,241,0.4)]">
 
                         {/* 🌈 ANIMATED GRADIENT */}
                         <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
@@ -832,6 +871,12 @@ export default function Dashboard() {
                             <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 blur-3xl opacity-30"></div>
                             <div className="absolute bottom-0 right-0 w-40 h-40 bg-indigo-400/20 blur-2xl"></div>
                         </div>
+
+                        <Dialog.Close asChild>
+                            <button className="absolute top-5 right-5 text-white/40 hover:text-white transition z-20 p-2">
+                                ✕
+                            </button>
+                        </Dialog.Close>
 
                         {/* HEADER */}
                         <div className="flex items-center gap-3 mb-5 relative z-10">
@@ -900,19 +945,51 @@ export default function Dashboard() {
                             ))}
                         </div>
 
-                        {/* TIMELINE */}
-                        <input
-                            type="number"
-                            value={onboardForm.target_months}
-                            onChange={e => {
-                                const value = e.target.value;
-                                setOnboardForm(f => ({
-                                    ...f,
-                                    target_months: value === "" ? "" : parseInt(value)
-                                }));
-                            }}
-                            className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white mb-4"
-                        />
+                        {/* DROPDOWNS */}
+                        <div className="space-y-3 mb-4">
+                            <div>
+                                <label className="text-xs text-white/50 block mb-1">Goal Type</label>
+                                <select 
+                                    value={onboardForm.goal_type}
+                                    onChange={e => setOnboardForm(f => ({ ...f, goal_type: e.target.value }))}
+                                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-400 outline-none appearance-none"
+                                >
+                                    <option value="Weight Loss" className="text-slate-800">Weight Loss</option>
+                                    <option value="Weight Gain" className="text-slate-800">Weight Gain</option>
+                                    <option value="Maintain Weight" className="text-slate-800">Maintain Weight</option>
+                                    <option value="Muscle Gain" className="text-slate-800">Muscle Gain</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label className="text-xs text-white/50 block mb-1">Activity Level</label>
+                                <select 
+                                    value={onboardForm.activity_level}
+                                    onChange={e => setOnboardForm(f => ({ ...f, activity_level: e.target.value }))}
+                                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-400 outline-none appearance-none"
+                                >
+                                    <option value="Sedentary" className="text-slate-800">Sedentary (little/no exercise)</option>
+                                    <option value="Light" className="text-slate-800">Lightly Active (1–3 days/week)</option>
+                                    <option value="Moderate" className="text-slate-800">Moderately Active (3–5 days/week)</option>
+                                    <option value="Active" className="text-slate-800">Very Active (6–7 days/week)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-xs text-white/50 block mb-1">Target Duration</label>
+                                <select 
+                                    value={onboardForm.target_months}
+                                    onChange={e => setOnboardForm(f => ({ ...f, target_months: parseInt(e.target.value) }))}
+                                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-400 outline-none appearance-none"
+                                >
+                                    <option value="1" className="text-slate-800">1 Month</option>
+                                    <option value="2" className="text-slate-800">2 Months</option>
+                                    <option value="3" className="text-slate-800">3 Months</option>
+                                    <option value="6" className="text-slate-800">6 Months</option>
+                                    <option value="12" className="text-slate-800">12 Months</option>
+                                </select>
+                            </div>
+                        </div>
 
                         {/* BUTTON */}
                         <button
@@ -922,7 +999,7 @@ export default function Dashboard() {
         border border-white/20 overflow-hidden">
 
                             <span className="relative z-10 flex items-center justify-center gap-2">
-                                {isOnboardingLoading ? "Loading..." : "Set Goals"}
+                                {isOnboardingLoading ? "Saving..." : "Calculate My Targets"}
                             </span>
 
                             <span className="absolute inset-0 bg-white/20 blur-2xl opacity-20"></span>

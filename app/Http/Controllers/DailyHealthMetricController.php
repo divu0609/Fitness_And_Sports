@@ -62,9 +62,9 @@ class DailyHealthMetricController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        $apiKey = config('services.nvidia.key');
+        $apiKey = config('services.gemini.key') ?? env('GEMINI_API_KEY');
         if (! $apiKey) {
-            return response()->json(['error' => 'Nvidia API key is not configured.'], 500);
+            return response()->json(['error' => 'Gemini API key is not configured.'], 500);
         }
 
         $prompt = "You are a biological fitness calculator AI. A {$user->age}-year-old {$user->gender} weighing {$user->weight_kg}kg with a height of {$user->height_cm}cm has just walked {$request->steps} steps.\n"
@@ -72,22 +72,20 @@ class DailyHealthMetricController extends Controller
                 .'Return strictly a JSON object with this exact structure (an integer): {"calories_burned": 0}. Do not include markdown blocks or any other text.';
 
         try {
-            $response = Http::timeout(90)->retry(2, 1000)->withHeaders([
-                'Authorization' => "Bearer {$apiKey}",
-                'Accept' => 'application/json',
-            ])->post('https://integrate.api.nvidia.com/v1/chat/completions', [
-                'model' => 'google/gemma-4-31b-it',
-                'messages' => [
-                    ['role' => 'user', 'content' => $prompt],
+            $response = Http::timeout(30)->withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={$apiKey}", [
+                'contents' => [
+                    ['parts' => [['text' => $prompt]]]
                 ],
-                'max_tokens' => 100,
-                'temperature' => 0.1,
-                'stream' => false,
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                ]
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                $responseText = $data['choices'][0]['message']['content'] ?? null;
+                $responseText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
                 if ($responseText) {
                     $jsonContent = trim($responseText);
@@ -149,9 +147,9 @@ class DailyHealthMetricController extends Controller
         ]);
 
         $user = $request->user();
-        $apiKey = config('services.nvidia.key');
+        $apiKey = config('services.gemini.key') ?? env('GEMINI_API_KEY');
         if (! $apiKey) {
-            return response()->json(['error' => 'Nvidia API key is not configured.'], 500);
+            return response()->json(['error' => 'Gemini API key is not configured.'], 500);
         }
 
         $prompt = "You are a biological fitness calculator AI. A {$user->age}-year-old {$user->gender} weighing {$user->weight_kg}kg with a height of {$user->height_cm}cm has just completed a physical activity: '{$request->activity_name}' for {$request->duration_minutes} contiguous minutes.\n"
@@ -159,22 +157,20 @@ class DailyHealthMetricController extends Controller
                 .'Return strictly a JSON object with this exact structure (an integer): {"calories_burned": 0}. Do not include markdown blocks or any other text.';
 
         try {
-            $response = Http::timeout(90)->retry(2, 1000)->withHeaders([
-                'Authorization' => "Bearer {$apiKey}",
-                'Accept' => 'application/json',
-            ])->post('https://integrate.api.nvidia.com/v1/chat/completions', [
-                'model' => 'google/gemma-4-31b-it',
-                'messages' => [
-                    ['role' => 'user', 'content' => $prompt],
+            $response = Http::timeout(30)->withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={$apiKey}", [
+                'contents' => [
+                    ['parts' => [['text' => $prompt]]]
                 ],
-                'max_tokens' => 100,
-                'temperature' => 0.1,
-                'stream' => false,
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                ]
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                $responseText = $data['choices'][0]['message']['content'] ?? null;
+                $responseText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
                 if ($responseText) {
                     $jsonContent = trim($responseText);
