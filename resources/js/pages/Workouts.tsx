@@ -11,115 +11,115 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 /* ── All supported exercise definitions ── */
 const ALL_EXERCISES = [
     {
-        name: 'Walking',        emoji: '🚶', category: 'Cardio',
+        name: 'Walking', emoji: '🚶', category: 'Cardio',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '30' },
-            { key: 'speed_kmh',        label: 'Speed',    unit: 'km/h', type: 'number', placeholder: '5' },
+            { key: 'speed_kmh', label: 'Speed', unit: 'km/h', type: 'number', placeholder: '5' },
         ],
     },
     {
-        name: 'Running',        emoji: '🏃', category: 'Cardio',
-        fields: [
-            { key: 'duration_minutes', label: 'Duration', unit: 'min',  type: 'number', placeholder: '20' },
-            { key: 'speed_kmh',        label: 'Speed',    unit: 'km/h', type: 'number', placeholder: '10' },
-        ],
-    },
-    {
-        name: 'Cycling',        emoji: '🚴', category: 'Cardio',
-        fields: [
-            { key: 'duration_minutes', label: 'Duration',    unit: 'min',  type: 'number', placeholder: '45' },
-            { key: 'speed_kmh',        label: 'Avg Speed',   unit: 'km/h', type: 'number', placeholder: '20' },
-        ],
-    },
-    {
-        name: 'Swimming',       emoji: '🏊', category: 'Cardio',
-        fields: [
-            { key: 'duration_minutes', label: 'Duration', unit: 'min',  type: 'number', placeholder: '30' },
-            { key: 'laps',             label: 'Laps',     unit: 'laps', type: 'number', placeholder: '20' },
-        ],
-    },
-    {
-        name: 'Weightlifting',  emoji: '🏋️', category: 'Strength',
-        fields: [
-            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '45' },
-            { key: 'sets',             label: 'Sets',     unit: '',    type: 'number', placeholder: '4'  },
-        ],
-    },
-    {
-        name: 'Yoga',           emoji: '🧘', category: 'Flexibility',
-        fields: [
-            { key: 'duration_minutes', label: 'Duration',   unit: 'min', type: 'number', placeholder: '60' },
-            { key: 'intensity',        label: 'Intensity',  unit: '',    type: 'select', options: ['gentle', 'moderate', 'power'], placeholder: 'moderate' },
-        ],
-    },
-    {
-        name: 'HIIT',           emoji: '⚡', category: 'Cardio',
+        name: 'Running', emoji: '🏃', category: 'Cardio',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '20' },
-            { key: 'rounds',           label: 'Rounds',   unit: '',    type: 'number', placeholder: '8'  },
+            { key: 'speed_kmh', label: 'Speed', unit: 'km/h', type: 'number', placeholder: '10' },
         ],
     },
     {
-        name: 'Jump Rope',      emoji: '🪢', category: 'Cardio',
+        name: 'Cycling', emoji: '🚴', category: 'Cardio',
+        fields: [
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '45' },
+            { key: 'speed_kmh', label: 'Avg Speed', unit: 'km/h', type: 'number', placeholder: '20' },
+        ],
+    },
+    {
+        name: 'Swimming', emoji: '🏊', category: 'Cardio',
+        fields: [
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '30' },
+            { key: 'laps', label: 'Laps', unit: 'laps', type: 'number', placeholder: '20' },
+        ],
+    },
+    {
+        name: 'Weightlifting', emoji: '🏋️', category: 'Strength',
+        fields: [
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '45' },
+            { key: 'sets', label: 'Sets', unit: '', type: 'number', placeholder: '4' },
+        ],
+    },
+    {
+        name: 'Yoga', emoji: '🧘', category: 'Flexibility',
+        fields: [
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '60' },
+            { key: 'intensity', label: 'Intensity', unit: '', type: 'select', options: ['gentle', 'moderate', 'power'], placeholder: 'moderate' },
+        ],
+    },
+    {
+        name: 'HIIT', emoji: '⚡', category: 'Cardio',
+        fields: [
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '20' },
+            { key: 'rounds', label: 'Rounds', unit: '', type: 'number', placeholder: '8' },
+        ],
+    },
+    {
+        name: 'Jump Rope', emoji: '🪢', category: 'Cardio',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '15' },
         ],
     },
     {
-        name: 'Rowing',         emoji: '🚣', category: 'Cardio',
-        fields: [
-            { key: 'duration_minutes', label: 'Duration',  unit: 'min', type: 'number', placeholder: '30' },
-            { key: 'distance_m',       label: 'Distance',  unit: 'm',   type: 'number', placeholder: '5000' },
-        ],
-    },
-    {
-        name: 'Boxing',         emoji: '🥊', category: 'Strength',
+        name: 'Rowing', emoji: '🚣', category: 'Cardio',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '30' },
-            { key: 'rounds',           label: 'Rounds',   unit: '',    type: 'number', placeholder: '6'  },
+            { key: 'distance_m', label: 'Distance', unit: 'm', type: 'number', placeholder: '5000' },
         ],
     },
     {
-        name: 'Pilates',        emoji: '🤸', category: 'Flexibility',
+        name: 'Boxing', emoji: '🥊', category: 'Strength',
+        fields: [
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '30' },
+            { key: 'rounds', label: 'Rounds', unit: '', type: 'number', placeholder: '6' },
+        ],
+    },
+    {
+        name: 'Pilates', emoji: '🤸', category: 'Flexibility',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '45' },
         ],
     },
     {
-        name: 'Rock Climbing',  emoji: '🧗', category: 'Strength',
+        name: 'Rock Climbing', emoji: '🧗', category: 'Strength',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '60' },
-            { key: 'routes',           label: 'Routes',   unit: '',    type: 'number', placeholder: '5'  },
+            { key: 'routes', label: 'Routes', unit: '', type: 'number', placeholder: '5' },
         ],
     },
     {
-        name: 'Dancing',        emoji: '💃', category: 'Cardio',
+        name: 'Dancing', emoji: '💃', category: 'Cardio',
         fields: [
-            { key: 'duration_minutes', label: 'Duration',  unit: 'min', type: 'number', placeholder: '30' },
-            { key: 'intensity',        label: 'Intensity', unit: '',    type: 'select', options: ['slow', 'moderate', 'intense'], placeholder: 'moderate' },
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '30' },
+            { key: 'intensity', label: 'Intensity', unit: '', type: 'select', options: ['slow', 'moderate', 'intense'], placeholder: 'moderate' },
         ],
     },
     {
-        name: 'Basketball',     emoji: '🏀', category: 'Sport',
+        name: 'Basketball', emoji: '🏀', category: 'Sport',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '40' },
         ],
     },
     {
-        name: 'Football',       emoji: '⚽', category: 'Sport',
+        name: 'Football', emoji: '⚽', category: 'Sport',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '90' },
         ],
     },
     {
-        name: 'Tennis',         emoji: '🎾', category: 'Sport',
+        name: 'Tennis', emoji: '🎾', category: 'Sport',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '60' },
-            { key: 'sets',             label: 'Sets',     unit: '',    type: 'number', placeholder: '3'  },
+            { key: 'sets', label: 'Sets', unit: '', type: 'number', placeholder: '3' },
         ],
     },
     {
-        name: 'Badminton',      emoji: '🏸', category: 'Sport',
+        name: 'Badminton', emoji: '🏸', category: 'Sport',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '45' },
         ],
@@ -127,12 +127,12 @@ const ALL_EXERCISES = [
     {
         name: 'Stair Climbing', emoji: '🪜', category: 'Cardio',
         fields: [
-            { key: 'duration_minutes', label: 'Duration', unit: 'min',   type: 'number', placeholder: '20' },
-            { key: 'floors',           label: 'Floors',   unit: 'floors', type: 'number', placeholder: '15' },
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '20' },
+            { key: 'floors', label: 'Floors', unit: 'floors', type: 'number', placeholder: '15' },
         ],
     },
     {
-        name: 'Stretching',     emoji: '🦵', category: 'Flexibility',
+        name: 'Stretching', emoji: '🦵', category: 'Flexibility',
         fields: [
             { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '20' },
         ],
@@ -140,8 +140,8 @@ const ALL_EXERCISES = [
     {
         name: 'Other Exercise', emoji: '🏅', category: 'Other',
         fields: [
-            { key: 'duration_minutes', label: 'Duration',    unit: 'min', type: 'number', placeholder: '30' },
-            { key: 'intensity',        label: 'Intensity',   unit: '',    type: 'select', options: ['light', 'moderate', 'vigorous'], placeholder: 'moderate' },
+            { key: 'duration_minutes', label: 'Duration', unit: 'min', type: 'number', placeholder: '30' },
+            { key: 'intensity', label: 'Intensity', unit: '', type: 'select', options: ['light', 'moderate', 'vigorous'], placeholder: 'moderate' },
         ],
     },
 ];
@@ -153,7 +153,7 @@ function levenshtein(a: string, b: string): number {
     for (let j = 0; j <= n; j++) dp[0][j] = j;
     for (let i = 1; i <= m; i++) {
         for (let j = 1; j <= n; j++) {
-            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+            dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
         }
     }
     return dp[m][n];
@@ -165,7 +165,7 @@ function fuzzySearch(query: string) {
     const scored = ALL_EXERCISES.map(ex => {
         const name = ex.name.toLowerCase();
         const exact = name.includes(q) ? 0 : Infinity;
-        const dist  = levenshtein(q, name.substring(0, q.length));
+        const dist = levenshtein(q, name.substring(0, q.length));
         return { ex, score: exact === 0 ? 0 : dist };
     });
     return scored
@@ -208,25 +208,25 @@ export default function Workouts({ auth }: any) {
 
     const getClientDate = () => {
         const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
     useEffect(() => {
         axios.get('/api/metrics', { params: { client_date: getClientDate() } })
             .then(res => { if (res.data.metrics) setMetrics(res.data.metrics); })
-            .catch(() => {});
+            .catch(() => { });
 
         axios.get('/api/metrics/history')
             .then(res => {
                 if (res.data.success) {
-                    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     setHistoryData(res.data.history.map((item: any) => {
                         const d = new Date(item.date);
                         return { name: days[d.getDay()], dateDisplay: d.getDate(), calories: item.workout_calories_burned || 0 };
                     }));
                 }
             })
-            .catch(() => {})
+            .catch(() => { })
             .finally(() => setIsHistoryLoading(false));
     }, []);
 
@@ -292,7 +292,7 @@ export default function Workouts({ auth }: any) {
             }
         } catch (err: any) {
             const detail = err.response?.data?.details || err.response?.data?.error || '';
-            setAiError(`Could not calculate${detail ? ': ' + detail : '. Please try again.'}` );
+            setAiError(`Could not calculate${detail ? ': ' + detail : '. Please try again.'}`);
         }
         setIsAiLoading(false);
     };

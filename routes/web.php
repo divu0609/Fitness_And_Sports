@@ -13,6 +13,10 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
+Route::get('/shop', function () {
+    return Inertia::render('Shop');
+})->name('shop');
+
 Route::post('/api/bmi/analyze', [BmiController::class, 'analyze'])->name('bmi.analyze');
 
 // Community — public browsing (no auth required)

@@ -11,6 +11,7 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import * as Dialog from '@radix-ui/react-dialog';
+import LottieLoader from '@/components/lottie-loader';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }];
 
@@ -121,12 +122,12 @@ export default function Dashboard() {
     /* ── Onboarding state ── */
     const needsOnboarding = !user.daily_calorie_target;
     const [isOnboardingOpen, setIsOnboardingOpen] = useState(needsOnboarding);
-    const [onboardForm, setOnboardForm] = useState({ 
-        age: user.age || 26, 
-        gender: user.gender || 'male', 
-        height_cm: user.height_cm || 175, 
-        weight_kg: user.weight_kg || 78, 
-        target_weight_kg: user.target_weight_kg || 70, 
+    const [onboardForm, setOnboardForm] = useState({
+        age: user.age || 26,
+        gender: user.gender || 'male',
+        height_cm: user.height_cm || 175,
+        weight_kg: user.weight_kg || 78,
+        target_weight_kg: user.target_weight_kg || 70,
         target_months: user.target_months || 3,
         goal_type: user.fitness_goal || 'Weight Loss',
         activity_level: user.activity_level || 'Light'
@@ -825,8 +826,7 @@ export default function Dashboard() {
                             <textarea className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 min-h-[120px] focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-slate-700 dark:text-slate-200 resize-none text-sm" placeholder="e.g., 200g grilled chicken, large bowl of rice and steamed broccoli" value={foodText} onChange={e => setFoodText(e.target.value)} disabled={isAiLoading} />
                             {isAiLoading && (
                                 <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl">
-                                    <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-2" />
-                                    <span className="text-emerald-700 font-black text-xs tracking-widest animate-pulse">ANALYZING...</span>
+                                    <LottieLoader className="w-48 h-48 mb-2" text="ANALYZING..." />
                                 </div>
                             )}
                         </div>
@@ -949,7 +949,7 @@ export default function Dashboard() {
                         <div className="space-y-3 mb-4">
                             <div>
                                 <label className="text-xs text-white/50 block mb-1">Goal Type</label>
-                                <select 
+                                <select
                                     value={onboardForm.goal_type}
                                     onChange={e => setOnboardForm(f => ({ ...f, goal_type: e.target.value }))}
                                     className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-400 outline-none appearance-none"
@@ -960,10 +960,10 @@ export default function Dashboard() {
                                     <option value="Muscle Gain" className="text-slate-800">Muscle Gain</option>
                                 </select>
                             </div>
-                            
+
                             <div>
                                 <label className="text-xs text-white/50 block mb-1">Activity Level</label>
-                                <select 
+                                <select
                                     value={onboardForm.activity_level}
                                     onChange={e => setOnboardForm(f => ({ ...f, activity_level: e.target.value }))}
                                     className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-400 outline-none appearance-none"
@@ -977,7 +977,7 @@ export default function Dashboard() {
 
                             <div>
                                 <label className="text-xs text-white/50 block mb-1">Target Duration</label>
-                                <select 
+                                <select
                                     value={onboardForm.target_months}
                                     onChange={e => setOnboardForm(f => ({ ...f, target_months: parseInt(e.target.value) }))}
                                     className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-400 outline-none appearance-none"
